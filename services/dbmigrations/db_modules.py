@@ -119,6 +119,23 @@ def RemoveExperiment(ID):
         print(f"Error connecting to mariaDB platform: {e}")
         sys.exit(1)
 
+#creating a new user
+#need to debug and figure this part out
+def createUser(username, password):
+    try:
+        conn = mariadb.connect(
+        user = "glados",
+        password = "GladosPass",
+        host = "localhost",
+        port = 3306
+        )
+        curs = conn.cursor()
+        curs.execute("insert into person (username, password) values " , (username), (password))
+        conn.commit()
+    except mariadb.Error as e:
+        print(f"Error inserting into user name: {e}")
+        sys.exit(1)
+
 def ShowAll():
     try:
         conn = mariadb.connect(
