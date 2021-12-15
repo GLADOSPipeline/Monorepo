@@ -9,3 +9,6 @@ class User:
         self.passowrd = hashlib.sha256(str.encode(password)).hexdigest()
         #figure out how to invoke and call this in the front end
     #need to figure out how to add it
+    def deleteUser(self):
+        return ""
+
