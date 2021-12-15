@@ -130,11 +130,42 @@ def createUser(username, password):
         port = 3306
         )
         curs = conn.cursor()
-        curs.execute("insert into person (username, password) values " , (username), (password))
+        curs.execute("insert into person (?, ?) values " , (username), (password))
         conn.commit()
     except mariadb.Error as e:
         print(f"Error inserting into user name: {e}")
         sys.exit(1)
+
+def deleteUser(username):
+    try:
+        conn = mariadb.connect(
+            user="glados",
+            password="GladosPass",
+            host="localhost",
+            port=3306
+        )
+        curs = conn.cursor()
+        curs.execute("delete from person where username=? ", (username))
+        conn.commit()
+    except mariadb.Error as e:
+        print(f"Error deleting user {e}")
+        sys.exit(1)
+
+def changePassword(username, password):
+    try:
+        conn = mariadb.connect(
+            user="glados",
+            password="GladosPass",
+            host="localhost",
+            port=3306
+        )
+        curs = conn.cursor()
+        curs.execute("update person set password=? where username=?", (password), (username))
+        conn.commit()
+    except mariadb.Error as e:
+        print(f"changing password error {e}")
+        sys.exit(1)
+
 
 def ShowAll():
     try:

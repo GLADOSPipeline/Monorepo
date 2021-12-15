@@ -5,4 +5,3 @@ def createUser(username, password): #need to figure out a way to get a user name
     user = User(username, password)
     user.hashPassowrd(password)
 def storeUserInDatabase:
-    ""
