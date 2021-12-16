@@ -120,7 +120,7 @@ def RemoveExperiment(ID):
         sys.exit(1)
 
 #creating a new user
-#need to debug and figure this part out
+#need to debug and figure this part out  stuff blah blah blah my life is hell
 def createUser(username, password):
     try:
         conn = mariadb.connect(
