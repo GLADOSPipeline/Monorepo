@@ -30,3 +30,16 @@ print(ShowAll());
 print("TEST remove experiment removing experiment 2 then showing all")
 RemoveExperiment(2)
 print(ShowAll());
+print("CREATE A USER MARIA DB")
+createUser("omar", "omar")
+print("DELETING A USER")
+deleteUser("omar")
+print("CREATING A NEW USER")
+createUser("ryan", "ryan")
+(print "CHANING THE PASSOWRD")
+changePassword("ryan", "wand")
+(print "CHANGING THE USERNAME")
+changeUsername("ryan", "wandke")
+
+
+

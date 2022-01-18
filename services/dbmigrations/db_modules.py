@@ -166,6 +166,21 @@ def changePassword(username, password):
         print(f"changing password error {e}")
         sys.exit(1)
 
+def changeUsername(username, newusername):
+    try:
+        conn = mariadb.connect(
+            user="glados",
+            password="GladosPass",
+            host="localhost",
+            port=3306
+        )
+        curs = conn.cursor()
+        curs.execute("update person set username=? where username=?", (newusername), (username))
+        conn.commit()
+    except mariadb.Error as e:
+        print(f"changing password error {e}")
+        sys.exit(1)
+
 
 def ShowAll():
     try:
