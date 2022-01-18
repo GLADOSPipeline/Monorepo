@@ -36,9 +36,9 @@ print("DELETING A USER")
 deleteUser("omar")
 print("CREATING A NEW USER")
 createUser("ryan", "ryan")
-(print "CHANING THE PASSOWRD")
+print ("CHANING THE PASSOWRD")
 changePassword("ryan", "wand")
-(print "CHANGING THE USERNAME")
+print ("CHANGING THE USERNAME")
 changeUsername("ryan", "wandke")
 
 
