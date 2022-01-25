@@ -1,4 +1,4 @@
-from mariatest import *
+from db_modules import *
 #if you want to run this you need 
 #  1. Mariadb Installed
 #  2. Mongo DB instaled
