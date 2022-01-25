@@ -8,14 +8,15 @@ import importlib
 import requests
 from flask import Flask, jsonify, request
 import numpy as np
+import collections
 import itertools
 import csv
 import copy
 import json
-
+import stat
 
 app = Flask(__name__)
-app.config['DEBUG'] = True
+app.config['DEBUG'] = False
 
 ### FLASK API ENDPOINTS
 
@@ -25,7 +26,6 @@ def recv_experiment():
     exp = proc_msg(exp)
     GlobalLoadBalancer.submit_experiment(exp)
     return 'OK'
-
 
 ### GLB
 class GLB(object):
@@ -50,56 +50,95 @@ class GLB(object):
 def experiment_event(msg):
     params = msg
     # within each experiment, we use threads
-    os.chdir(f'exps')
-    os.mkdir(f'{params["id"]}')
-    os.chdir(f'{params["id"]}')
+    # if not os.path.exists(params['fileName']):
+    #     raise
+    os.chmod(f'incoming/{params["fileName"]}', 0o777)
+    os.mkdir(f'exps/{params["id"]}')
+    os.rename(f'incoming/{params["fileName"]}', f'exps/{params["id"]}/{params["fileName"]}')
+    os.chdir(f'exps/{params["id"]}')
     param_iter = gen_configs(params['parameters'])
+    ## we submit experiment configuration writing to a thread pool if verbose
+    if params['verbose']:
+        os.mkdir('configs')
+        with ThreadPoolExecutor(1) as e:
+            e.submit(write_configs, param_iter, [obs['paramName'] for obs in params['parameters']])
+    
     func = params['func']
     ## process stuff and make API call to inform of the experiment's commencement
     results = []
     dead = 0
-    #print(params['id'])
+    i = 0
     with ThreadPoolExecutor(1) as executor:
-        #print(param_iter)        
-        result_futures = list(map(lambda x: executor.submit(mapper, {'func':func,'params':x}), param_iter))
+        result_futures = list(map(lambda x: executor.submit(mapper, {'filename': params['fileName'],'iter':x[0],'func':func,'params':x[1]}), list(param_iter)))
         for future in as_completed(result_futures):
             try:
-                results.append(future.result())
-            except ValueError as e:
+                res = future.result()
+                results.append({'iter': res[0], 'params': res[1], 'result': res[2]})
+                if i % 10 == 0:
+                    logging.info(f'{i} iterations completed.')
+            except Exception as e:
                 ### write temporary state of problems
-                results.append(e.args[1] + [0])
+                print(e)
+                results.append({'iter': 0, 'params': [0], 'result': 'FAILED'})
                 dead+=1
+            i+=1
     
     ## process stuff and make API call to inform of the experiment's completion
     ### write results to a csv file named experiment_id.csv
     with open(f'result.csv', 'w') as csvfile:
-        header = [k['paramName'] for k in params['parameters']]
+        header = ['iter']
+        header += [k['paramName'] for k in params['parameters']]
         header.append('result')
         writer = csv.writer(csvfile)
         writer.writerow(header)
-        writer.writerows(results)
+        # print(results)
+        writer.writerows(list(map(lambda x: post(x), results)))
+
     
     return params['id'],1.-float(dead)/len(results),results
 
+def post(s):
+    s = list(s.values())
+    s = [s[0]] + s[1] + [s[2]]
+    return s
+
 def experiment_resolve(future):
     ### Make API call to inform of completion of experiment
+    # if future.exception():
+        
     id, prog, results = future.result()
     GlobalLoadBalancer.update_experiment_status(id, 'DONE')
     logging.info(f'[EXP COMPLETE]:\tExperiment {id} completed with {prog} success rate.')
 
 def mapper(params):
-    try: 
-        return list(params['params']) + [params['func'](*params['params'])]
+    #try: 
+    #   return params['iter'], list(params['params']), [params['func'](*params['params'])]
+    #except Exception as e:
+    #   raise Exception(f'Mapper failed with exception: {e} for the iteration with params', params['iter'], params['params'])
+    try:
+        #print(params['params'])
+        result = communicate(f'./{params["filename"]}', list(map(str, list(params['params']))))
     except Exception as e:
-        raise ValueError(f'Mapper failed with exception: {e} and params:', params)
+        raise Exception(f'Mapper failed with exception: {e} for the')
+    return params['iter'], list(params['params']), result
+    
+    
 
 ### UTILS
 
 def gen_configs(hyperparams):
     ### Generate hyperparameter configurations
-    params_raw = [k['values'] for i,k in enumerate(hyperparams)]
+    params_raw = [k['values'] for k in hyperparams]
     params_raw = [[x for x in np.arange(k[0],k[1]+k[2],k[2])] for k in params_raw]
-    return list(itertools.product(*params_raw))
+    return enumerate(list(itertools.product(*params_raw)))
+
+def write_configs(raw, headers):
+    dicts = [{headers[i]:np_uncode(x[i]) for i in range(len(x))} for _,x in copy.deepcopy(raw)]
+    jsons = [json.dumps(x) for x in dicts]
+    for i,_ in copy.deepcopy(raw):
+        with open(f'configs/config_{i}.json', 'w+') as f:
+            f.write(jsons[i])
+        
 
 def proc_msg(msg):
     ## for now, this function is hardcoding some things, but it's no biggie
@@ -113,19 +152,53 @@ def proc_msg(msg):
     del rm['experimentName']
     return rm
 
-    
+def np_uncode(x):
+    if isinstance(x,np.integer):
+        return int(x)
+    if isinstance(x,np.floating):
+        return float(x)
+
+
+
+def flatten(x):
+    if isinstance(x, collections.Iterable):
+        return [a for i in x for a in flatten(i)]
+    else:
+        return [x]
 
 def initilize_work_space():
-    if os.path.exists('GLADOS_HOME'):
-        os.chdir('GLADOS_HOME')
-        if not os.path.exists('exps'):
-            os.mdkir('exps')
-        if not os.path.existS('res'):
-            os.mkdir('res')
-    else: 
+    names = ['exps','res','incoming']
+    if not os.path.exists('GLADOS_HOME'):
         os.mkdir('GLADOS_HOME')
-        os.mkdir('GLADOS_HOME/exps')
-        os.mkdir('GLADOS_HOME/res')
+    for name in names:
+        if not os.path.exists(f'GLADOS_HOME/{name}'):
+            os.mkdir(f'GLADOS_HOME/{name}')
+    os.chdir('GLADOS_HOME')
+
+
+def communicate(process, payload):
+    with Popen([process] + payload, stdout=PIPE, stdin=PIPE, stderr=PIPE,encoding='utf8') as p:
+        try:
+            stdout_data = p.communicate()
+            #if not stdout_data:
+            #    raise UnresponsiveBinaryException(f'{process} is unresponsive.')
+            if stdout_data[1]:
+                print(f'errors returned from pipe is {stdout_data[1]}')
+                raise FailedIterationException(f'Iteration has failed with error {stdout_data[1]}')
+        except Exception as e:
+            raise PipeFailureException(f'Error communicating with process: {e}')
+    return float(stdout_data[0])
+
+### TYPES 
+
+class FailedIterationException(Exception):
+    pass
+
+class PipeFailureException(Exception):
+    pass
+
+class UnresponsiveBinaryException(Exception):
+    pass
 
 ### EXPERIMENTAL ARTIFACTS
 
@@ -133,20 +206,22 @@ def add_nums(x,y):
     ## for testing purposes.
     return x+y
 
-
 if __name__=='__main__':
     logging.getLogger().setLevel(logging.DEBUG)
     initilize_work_space()
     GlobalLoadBalancer = GLB(1)
     hyperparams = [{'paramName':'x','values':[0,10,0.1]},{'paramName':'y','values':[5,100,5]}]
-    # msg_test = {
-    #     'id' : 'XVZ01',
-    #     'user' : 'elijah',
-    #     'func' : add_nums,
-    #     'hyperparams' : hyperparams
-    # }
+    msg_test = {
+        'id' : 'XVZ01',
+        'user' : 'elijah',
+        'func' : add_nums,
+        'hyperparams' : hyperparams
+    }
     # GlobalLoadBalancer.submit_experiment(msg_test)
     app.run()
+    #blablabla = gen_configs(msg_test['hyperparams'])
+    #write_configs(blablabla, [obs['paramName'] for obs in msg_test['hyperparams']])
+    #communicate('./add_nums.py', ['1','2'])
     
 '''
 ### plot postprocessing / native support ###

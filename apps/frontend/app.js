@@ -1,11 +1,12 @@
 const express = require('express'); //Import the express dependency
 const fetch = require('node-fetch');
 const fs = require('fs');
+var formidable = require('formidable');
 const app = express(); //Instantiate an express app, the main work horse of this server
 const port = 5005; //Save the port number where your server will be listening
 var submit = false;
 var expname = null;
-var filepath = '';
+var fileName = '';
 
 //Idiomatic expression in express to route and respond to a client request
 app.use(express.static('public'));
@@ -24,12 +25,27 @@ app.get('/parameters', (req, res) => {
 app.get('/favicon.ico', (req, res) => {
 	res.sendFile(__dirname + '/favicon.ico');
 });
-
+app.post('/fileupload', (req, res) => {
+	var form = new formidable.IncomingForm();
+	form.parse(req, function (err, fields, files) {
+		console.log('we got a file!');
+		var oldpath = files.filetoupload.filepath;
+		var newpath =
+			'../../scripts/GLADOS_HOME/incoming/' +
+			files.filetoupload.originalFilename;
+		fileName = files.filetoupload.originalFilename;
+		fs.rename(oldpath, newpath, function (err) {
+			if (err) throw err;
+			res.redirect('/parameters');
+		});
+	});
+});
 app.post('/parameters', (req, res) => {
 	expname = req.body.experimentName;
 	console.log(expname);
 
 	var json = req.body;
+	json['fileName'] = fileName;
 
 	// submit = req.body.submit;
 	// console.log(__dirname + `/exploc/experiment_${expname}`);

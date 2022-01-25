@@ -37,13 +37,12 @@ function checkUser(username, password) {
 }
  
 
-function experimentParamsJSON(paramsArr, experimentName, user, experiment, verboseBool){
+function experimentParamsJSON(paramsArr, experimentName, user, verboseBool){
 
 			const params = {
 				"experimentName": experimentName,
 				"user": user,
 				"parameters": paramsArr,
-				"file" : experiment,
 				"verbose" : verboseBool
 			};
 	return params;
@@ -125,8 +124,7 @@ ParameterPageController = class {
 			}
 			var name = document.querySelector('#expName').value;
 			var verbose = document.querySelector('#verboseBool').checked;
-			var experiment = document.querySelector('#execute').value;
-			var params = experimentParamsJSON(array, name, this.user, experiment, verbose);
+			var params = experimentParamsJSON(array, name, this.user, verbose);
 			var executable = JSON.stringify(params);
 			//this.download(executable, 'exp.json', 'json');
 
@@ -139,6 +137,7 @@ ParameterPageController = class {
 			// 	cache: 'no-cache'}).then(data=>{console.log(data)})
 
 			console.log(executable);
+
 
 			fetch(`/parameters`, {
 				method: 'POST',
@@ -176,7 +175,7 @@ ParameterPageController = class {
 
 	updateList() {
 		const newList = htmlToElement('<div id="parameterContainer"></div>');
-		newList.appendChild(htmlToElement('<div class="row"> <div class= "col-3">Parameter Name</div> <div class= "col-2">Default Value</div> <div class= "col-2">Min Value</div> <div class= "col-2">Max Value</div> <div class= "col-2">Size Iteration</div></div>'))
+		newList.appendChild(htmlToElement('<div class="row"> <div class= "col-3">Parameter Name</div> <div class= "col-2">Default Value</div> <div class= "col-2">Min Value</div> <div class= "col-2">Max Value</div> <div class= "col-2">Increment Value</div></div>'))
 		for (let i = 0; i < this.int; i++) {
 			const newCard = this._createCard(i);
 			newCard.onclick = (event) => {
@@ -186,11 +185,6 @@ ParameterPageController = class {
 		}
 		newList.appendChild(htmlToElement('<div class="justify-content-center align-items-center">Experiment Name</div>'))
 		newList.appendChild(htmlToElement('<div class="form-outline justify-content-center align-items-center d-flex"><input type="text" id="expName" class="form-control" /></div>'));
-
-
-		newList.appendChild(htmlToElement('<div class="justify-content-center align-items-center">Executable Script/Command</div>'));
-		newList.appendChild(htmlToElement('<div class="form-outline justify-content-center align-items-center d-flex"><input type="text" id="execute" class="form-control" /></div>'));
-
 
 		const oldList = document.querySelector("#parameterContainer");
 		oldList.removeAttribute("id");
