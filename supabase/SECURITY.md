@@ -1,0 +1,1 @@
+web/static/.well-known/security.txt
