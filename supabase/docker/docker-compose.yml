@@ -4,7 +4,7 @@
 #   Stop:           docker-compose down
 #   Destroy:        docker-compose -f docker-compose.yml -f ./dev/docker-compose.dev.yml down -v --remove-orphans
 
-version: "3.8"
+version: '3.8'
 
 services:
   studio:
@@ -16,8 +16,8 @@ services:
     environment:
       SUPABASE_URL: ${KONG_URL}
       STUDIO_PG_META_URL: ${META_URL}
-      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJhbm9uIiwKICAgICJpc3MiOiAic3VwYWJhc2UiLAogICAgImlhdCI6IDE2NDQ5ODc2MDAsCiAgICAiZXhwIjogMTgwMjc1NDAwMAp9.eMfl9FG32Q6lfdYXi8A4IcWc6PbwuYFNunBPad8rFaM
-      SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZSIsCiAgICAiaWF0IjogMTY0NDk4NzYwMCwKICAgICJleHAiOiAxODAyNzU0MDAwCn0.aMtyI4HzGBWd1oSnwbzvIEGXOARJZP8h7HZGe6uClsk
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
 
   kong:
     container_name: supabase-kong
@@ -27,7 +27,7 @@ services:
       - ${KONG_HTTP_PORT}:8000/tcp
       - ${KONG_HTTPS_PORT}:8443/tcp
     environment:
-      KONG_DATABASE: "off"
+      KONG_DATABASE: 'off'
       KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
       # https://github.com/supabase/cli/issues/14
       KONG_DNS_ORDER: LAST,A,CNAME
@@ -83,7 +83,7 @@ services:
       PGRST_DB_SCHEMAS: public,storage
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${JWT_SECRET}
-      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_DB_USE_LEGACY_GUCS: 'false'
 
   realtime:
     container_name: supabase-realtime
@@ -97,14 +97,14 @@ services:
       DB_NAME: postgres
       DB_USER: postgres
       DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_SSL: "false"
+      DB_SSL: 'false'
       PORT: 4000
       JWT_SECRET: ${JWT_SECRET}
       REPLICATION_MODE: RLS
       REPLICATION_POLL_INTERVAL: 100
-      SECURE_CHANNELS: "true"
+      SECURE_CHANNELS: 'true'
       SLOT_NAME: supabase_realtime_rls
-      TEMPORARY_SLOT: "true"
+      TEMPORARY_SLOT: 'true'
     command: >
       bash -c "./prod/rel/realtime/bin/realtime eval Realtime.Release.migrate
       && ./prod/rel/realtime/bin/realtime start"
