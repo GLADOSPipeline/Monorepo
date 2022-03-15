@@ -156,3 +156,37 @@ services:
     volumes:
       - ./volumes/db/data:/var/lib/postgresql/data
       - ./volumes/db/init:/docker-entrypoint-initdb.d
+  app-backend:
+      image: glados-backend
+      container_name: backend
+      volumes:
+          - ./app/GLADOS_HOME:/app/GLADOS_HOME
+          - ./app/GLADOS_HOME/incoming:/app/GLADOS_HOME/incoming
+          - ./app/GLADOS_HOME/exps:/app/GLADOS_HOME/exps
+          - ./app/GLADOS_HOME/rec:/app/GLADOS_HOME/rec
+      networks:
+      - some-net
+      restart: always
+      ports:
+          - 5000:5000
+      expose:
+          - "5000"
+  app-frontend:
+      image: glados-frontend
+      container_name: frontend
+      volumes:
+          - ./app/GLADOS_HOME:/app/GLADOS_HOME
+          - ./app/GLADOS_HOME/incoming:/app/GLADOS_HOME/incoming
+          - ./app/GLADOS_HOME/exps:/app/GLADOS_HOME/exps
+          - ./app/GLADOS_HOME/rec:/app/GLADOS_HOME/rec
+      networks:
+      - some-net
+      restart: always
+      ports:
+          - 5005:5005
+      expose:
+          - "5005"
+networks:
+  some-net:
+    driver: bridge
+
