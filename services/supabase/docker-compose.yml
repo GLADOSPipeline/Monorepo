@@ -159,6 +159,8 @@ services:
   app-backend:
       image: glados-backend
       container_name: backend
+      environment:
+        - FLASK_DEBUG=true
       volumes:
           - ./app/GLADOS_HOME:/app/GLADOS_HOME
           - ./app/GLADOS_HOME/incoming:/app/GLADOS_HOME/incoming
