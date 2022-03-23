@@ -157,8 +157,13 @@ services:
       - ./volumes/db/data:/var/lib/postgresql/data
       - ./volumes/db/init:/docker-entrypoint-initdb.d
   app-backend:
-      image: glados-backend
+      build:
+        context: ../../apps/backend
+        dockerfile: ./Dockerfile
+      # image: glados-backend
       container_name: backend
+      environment:
+        - FLASK_DEBUG=true
       volumes:
           - ./app/GLADOS_HOME:/app/GLADOS_HOME
           - ./app/GLADOS_HOME/incoming:/app/GLADOS_HOME/incoming
@@ -172,7 +177,10 @@ services:
       expose:
           - "5050"
   app-frontend:
-      image: glados-frontend
+      # image: glados-frontend
+      build:
+        context: ../../apps/frontend
+        dockerfile: ./Dockerfile
       container_name: frontend
       volumes:
           - ./app/GLADOS_HOME:/app/GLADOS_HOME
