@@ -298,24 +298,36 @@ glados.ParameterPageController = class {
 			integerParams = integerParams - 2;
 			console.log("integer");
 			this.int = this.int - 2;
+			if(integerParams < 0){
+				integerParams = -1
+			}
 			this.updateList(0);
 		})
 		document.querySelector("#remBooleanBtn").addEventListener("click", (event) => {
 			booleParams = booleParams - 2;
 			console.log("boole");
 			this.int = this.int - 2;
+			if(booleParams < 0){
+				booleParams = -1
+			}
 			this.updateList(3);
 		})
 		document.querySelector("#remArrayBtn").addEventListener("click", (event) => {
 			arrayParams = arrayParams - 2;
 			console.log("array");
 			this.int = this.int - 2;
+			if(arrayParams < 0){
+				arrayParams = -1
+			}
 			this.updateList(2);
 		})
 		document.querySelector("#remFloatBtn").addEventListener("click", (event) => {
 			floatParams = floatParams - 2;
 			console.log("float");
 			this.int = this.int - 2;
+			if(floatParams < 0){
+				floatParams = -1
+			}
 			this.updateList(1);
 		})
 

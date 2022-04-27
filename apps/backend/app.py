@@ -125,7 +125,16 @@ def mapper(params):
     #   raise Exception(f'Mapper failed with exception: {e} for the iteration with params', params['iter'], params['params'])
     try:
         #print(params['params'])
-        result = communicate(f'./{params["filename"]}', list(map(str, list(params['params']))))
+        file = params["filename"]
+        fileMod = file[0:len(file)-5]
+        app.logger.info(f'the last 4 digits are {file[len(file)-5:len(file)]}')
+        #runs jar files (not working)
+        if(file[len(file)-5:len(file)] == ".java"):
+            os.system(f'javac {file}')
+            result = communicate(f'java {fileMod}', list(map(str, list(params['params']))))
+        #runs python files
+        else:
+            result = communicate(f'./{file}', list(map(str, list(params['params']))))
     except Exception as e:
         raise Exception(f'Mapper failed with exception: {e} for the')
     return params['iter'], list(params['params']), result
@@ -148,16 +157,13 @@ def gen_configs(hyperparams):
                     elif param2['type'] == "array":
                         temp.append(param2['value'])
                     elif param2['type'] == "boolean":
-                        app.logger.info(f'The boolean is {param2["value"]}')
                         if param2['value']:
                             temp.append([True])
                         else:
                             temp.append([''])
                 else:
                     temp.append(np.arange(param['values'][1],param['values'][2]+param['values'][3],param['values'][3]))
-            app.logger.info(f'After integer, temp is {temp}')
             concat_arrays(params_raw, list(itertools.product(*temp)))
-            app.logger.info(f'Params raw after integer is {params_raw}')
             temp = []
         elif param['type'] == "array":
             for param2 in hyperparams:
@@ -173,21 +179,24 @@ def gen_configs(hyperparams):
                             temp.append([False])
                 else:
                     temp.append(param2['value'])
-            app.logger.info(f'After array, temp is {temp}')
             concat_arrays(params_raw, list(itertools.product(*temp)))
-            app.logger.info(f'Params raw after array is {params_raw}')
             temp = []
 
     # params_raw = [k['values'] for k in hyperparams]
     # params_raw = [[x for x in np.arange(k[0],k[1]+k[2],k[2])] for k in params_raw
-
+    app.logger.info(f'DEBUG: params_raw is equal to {params_raw}')
     return enumerate(list(params_raw))
 def concat_arrays(arr1, arr2):
     for x in arr2:
         arr1.append(x)
 
 def write_configs(raw, headers):
-    dicts = [{headers[i]:np_uncode(x[i]) for i in range(len(x))} for _,x in copy.deepcopy(raw)]
+    dicts = []
+    for _,x in copy.deepcopy(raw):
+        temp = {}
+        for i in range(len(x)):
+            temp[headers[i]] = x[i]
+        dicts.append(temp)
     jsons = [json.dumps(x) for x in dicts]
     for i,_ in copy.deepcopy(raw):
         with open(f'configs/config_{i}.json', 'w+') as f:
