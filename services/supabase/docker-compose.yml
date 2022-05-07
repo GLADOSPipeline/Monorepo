@@ -118,7 +118,7 @@ services:
     restart: unless-stopped
     environment:
       ANON_KEY: ${ANON_KEY}
-      SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyAgCiAgICAicm9sZSI6ICJzZXJ2aWNlX3JvbGUiLAogICAgImlzcyI6ICJzdXBhYmFzZSIsCiAgICAiaWF0IjogMTY0NDk4NzYwMCwKICAgICJleHAiOiAxODAyNzU0MDAwCn0.aMtyI4HzGBWd1oSnwbzvIEGXOARJZP8h7HZGe6uClsk
+      SERVICE_KEY: ${SERVICE_ROLE_KEY}
       POSTGREST_URL: http://rest:3000
       PGRST_JWT_SECRET: ${JWT_SECRET}
       DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
@@ -163,38 +163,43 @@ services:
       # image: glados-backend
       container_name: backend
       environment:
-        - FLASK_DEBUG=true
+        FLASK_DEBUG: true
+        ANON_KEY: ${ANON_KEY}
+        SUPA_URL: http://supabase-kong:8000
       volumes:
           - ./app/GLADOS_HOME:/app/GLADOS_HOME
           - ./app/GLADOS_HOME/incoming:/app/GLADOS_HOME/incoming
           - ./app/GLADOS_HOME/exps:/app/GLADOS_HOME/exps
           - ./app/GLADOS_HOME/rec:/app/GLADOS_HOME/rec
-      networks:
-      - some-net
+      # networks:
+      # - some-net
       restart: always
       ports:
           - 5050:5050
       expose:
           - "5050"
-  app-frontend:
-      # image: glados-frontend
-      build:
-        context: ../../apps/frontend
-        dockerfile: ./Dockerfile
-      container_name: frontend
-      volumes:
-          - ./app/GLADOS_HOME:/app/GLADOS_HOME
-          - ./app/GLADOS_HOME/incoming:/app/GLADOS_HOME/incoming
-          - ./app/GLADOS_HOME/exps:/app/GLADOS_HOME/exps
-          - ./app/GLADOS_HOME/rec:/app/GLADOS_HOME/rec
-      networks:
-      - some-net
-      restart: always
-      ports:
-          - 5005:5005
-      expose:
-          - "5005"
-networks:
-  some-net:
-    driver: bridge
+      links:
+        - "kong:supabase-kong"
+        
+  # app-frontend:
+  #     # image: glados-frontend
+  #     build:
+  #       context: ../../apps/frontend
+  #       dockerfile: ./Dockerfile
+  #     container_name: frontend
+  #     volumes:
+  #         - ./app/GLADOS_HOME:/app/GLADOS_HOME
+  #         - ./app/GLADOS_HOME/incoming:/app/GLADOS_HOME/incoming
+  #         - ./app/GLADOS_HOME/exps:/app/GLADOS_HOME/exps
+  #         - ./app/GLADOS_HOME/rec:/app/GLADOS_HOME/rec
+  #     networks:
+  #     - some-net
+  #     restart: always
+  #     ports:
+  #         - 5005:5005
+  #     expose:
+  #         - "5005"
+# networks:
+#   some-net:
+#     driver: bridge
 
