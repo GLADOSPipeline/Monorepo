@@ -17,7 +17,11 @@ import copy
 import json
 import argparse
 import stat
+from supabase import create_client, Client
 
+url: str = os.environ.get("SUPABASE_URL")
+key: str = os.environ.get("SUPABASE_KEY")
+supabase: Client = create_client(url, key)
 # parser = argparse.ArgumentParser(description="Initialize GLADOS Global Load Balancer.")
 # parser.add_argument('--N', dest='nworkers',type=int,help='Number of thread / process workers to use.')
 
@@ -51,6 +55,7 @@ class GLB(object):
         
     
     def update_experiment_status(self, id, status):
+        dataUPD = supabase.table("experiments").update({"status": "COMPLETE"}).eq("id", id).execute()
         self.e_status[id] = status
 GlobalLoadBalancer = GLB(1)        
 
@@ -60,23 +65,30 @@ def experiment_event(msg):
     # within each experiment, we use threads
     # if not os.path.exists(params['fileName']):
     #     raise
-    os.chmod(f'GLADOS_HOME/incoming/{params["fileName"]}', 0o777)
-    os.mkdir(f'GLADOS_HOME/exps/{params["id"]}')
-    shutil.move(f'GLADOS_HOME/incoming/{params["fileName"]}', f'GLADOS_HOME/exps/{params["id"]}/{params["fileName"]}')
-    os.chdir(f'GLADOS_HOME/exps/{params["id"]}')
-    param_iter = gen_configs(params['parameters'])
+    data = supabase.table("experiments").select("*").eq("id", params).execute();
+    dataUPD = supabase.table("experiments").update({"status": "DISPATCHED"}).eq("id", data['id']).execute()
+    os.chmod(f'GLADOS_HOME/incoming/{data["fileName"]}', 0o777)
+    os.mkdir(f'GLADOS_HOME/exps/{data["id"]}')
+    shutil.move(f'GLADOS_HOME/incoming/{data["fileName"]}', f'GLADOS_HOME/exps/{data["id"]}/{data["fileName"]}')
+    os.chdir(f'GLADOS_HOME/exps/{data["id"]}')
+    parameters = json.loads(data['parameters'])
+    param_iter = gen_configs(parameters)
+    totalExp = len(list(param_iter))
     ## we submit experiment configuration writing to a thread pool if verbose
-    if params['verbose']:
+    if data['verbose']:
         os.mkdir('configs')
-        with ThreadPoolExecutor(1) as e:
-            e.submit(write_configs, param_iter, [obs['paramName'] for obs in params['parameters']])
+        with ThreadPoolExecutor(data['n_workers']) as e:
+            e.submit(write_configs, param_iter, [obs['paramName'] for obs in data['parameters']])
     
     ## process stuff and make API call to inform of the experiment's commencement
     results = []
     dead = 0
     i = 0
-    with ThreadPoolExecutor(1) as executor:
-        result_futures = list(map(lambda x: executor.submit(mapper, {'filename': params['fileName'],'iter':x[0],'params':x[1]}), list(param_iter)))
+    cp = int(totalExp *.1)
+    percent = 0
+    dataUPD = supabase.table("experiments").update({"status": "RUNNING"}).eq("id", data['id']).execute()
+    with ThreadPoolExecutor(data["n_workers"]) as executor:
+        result_futures = list(map(lambda x: executor.submit(mapper, {'filename': data['fileName'],'iter':x[0],'params':x[1]}), list(param_iter)))
         for future in as_completed(result_futures):
             try:
                 res = future.result()
@@ -89,9 +101,15 @@ def experiment_event(msg):
                 results.append({'iter': 0, 'params': [0], 'result': 'FAILED'})
                 dead+=1
             i+=1
+            if(i % cp == 0):
+                percent += 10
+                percent_success = int(((i-dead)/totalExp)*100)
+                percent_fail = int((dead/totalExp)*100)
+                dataUPD = supabase.table("experiments").update({"progress": percent, "percent_success": percent_success, "percent_fail" : percent_fail}).eq("id", data['id']).execute()
     
     ## process stuff and make API call to inform of the experiment's completion
     ### write results to a csv file named experiment_id.csv
+    dataUPD = supabase.table("experiments").update({"progress": 100, "percent_success": percent_success, "percent_fail" : percent_fail}).eq("id", data['id']).execute()
     with open(f'result.csv', 'w') as csvfile:
         header = ['iter']
         header += [k['paramName'] for k in params['parameters']]
