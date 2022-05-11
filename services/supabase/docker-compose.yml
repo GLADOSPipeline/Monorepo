@@ -163,7 +163,7 @@ services:
       # image: glados-backend
       container_name: backend
       environment:
-        FLASK_DEBUG: null
+        FLASK_DEBUG: true
         ANON_KEY: ${ANON_KEY}
         SUPA_URL: http://supabase-kong:8000
       volumes:
